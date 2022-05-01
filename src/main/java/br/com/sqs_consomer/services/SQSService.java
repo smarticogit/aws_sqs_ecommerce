@@ -5,14 +5,14 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.*;
-
 import java.util.List;
 import com.google.gson.Gson;
-
 import br.com.sqs_consomer.dto.infoPedido;
 
 public class SQSService {
     public static void messageReader() {
+        DeleteSqs deleteSqs = new DeleteSqs();
+
         AwsCredentialsProvider credentialsProvider = new AwsCredentialsProvider() {
             @Override
             public AwsCredentials resolveCredentials() {
@@ -50,16 +50,18 @@ public class SQSService {
 
             String id = "notaFiscal";
             String to = pedido.getTo();
+            System.out.println("Recebido--> " + mess.body());
 
             if (to.equals(id)) {
-                System.out.println("APROVACAO , enviando despacho");
-                deleteMessages(sqsClient, createResult.queueUrl(), mess);
+                deleteSqs.deleteMessages(sqsClient, createResult.queueUrl(), mess);
+                System.out.println("Excluindo... ");
 
                 infoPedido pedidoOut = new infoPedido(id, "despacho", pedido.getNumPedido());
                 sendMessage(sqsClient, createResult.queueUrl(), pedidoOut);
 
                 infoPedido pedidoOut2 = new infoPedido(id, "pedidos", pedido.getNumPedido());
                 sendMessage(sqsClient, createResult.queueUrl(), pedidoOut2);
+                System.out.println("APROVACAO , enviando... " + pedidoOut);
             }
         }
         sqsClient.close();
@@ -68,23 +70,14 @@ public class SQSService {
     public static List<Message> receiveMessages(SqsClient sqsClient, String queueUrl) {
         ReceiveMessageRequest receiveMessageRequest = ReceiveMessageRequest.builder()
                 .queueUrl(queueUrl)
-                .waitTimeSeconds(20)
+                .waitTimeSeconds(10)
                 .maxNumberOfMessages(5)
                 .build();
         List<Message> messages = sqsClient.receiveMessage(receiveMessageRequest).messages();
         return messages;
     }
 
-    public static void deleteMessages(SqsClient sqsClient, String queueUrl, Message message) {
-        DeleteMessageRequest deleteMessageRequest = DeleteMessageRequest.builder()
-                .queueUrl(queueUrl)
-                .receiptHandle(message.receiptHandle())
-                .build();
-        sqsClient.deleteMessage(deleteMessageRequest);
-    }
-
     public static void sendMessage(SqsClient sqsClient, String queueUrl, infoPedido message) {
-        System.out.println(message);
         String jsonPedido = new Gson().toJson(message);
         SendMessageRequest sendMsgRequest = SendMessageRequest.builder()
                 .queueUrl(queueUrl)

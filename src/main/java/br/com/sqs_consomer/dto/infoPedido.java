@@ -40,6 +40,6 @@ public class infoPedido {
 
     @Override
     public String toString() {
-        return "infoPedido [from=" + from + ", numPedido=" + numPedido + ", to=" + to + "]";
+        return "Pedido from: " + from + ", to: " + to +" numPedido: " + numPedido + "";
     }
 }
